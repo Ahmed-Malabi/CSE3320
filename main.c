@@ -25,18 +25,28 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <signal.h>
 
 /*
 fork() a child and print a message from the parent and 
 a message from the child
 */
 
-/*
-void alarm_handler(int alarm)
+void interupt_parent(int ppid)
 {
-	printf("Countdown completed");
+	kill(ppid, SIGUSR1);
 }
-*/
+
+void sig_handler(int signum)
+{
+	if(signum == SIGALRM)
+		kill(getppid(), SIGUSR1);
+	else if(signum == SIGUSR1)
+	{
+		printf("Countdown completed\n");
+	}
+}
+
 int main( void )
 {
 	pid_t pid = fork();
@@ -51,6 +61,8 @@ int main( void )
 	{
 		// When fork() returns 0, we are in the child process.
 		int i;
+		signal(SIGALRM, sig_handler);
+		alarm(10);
 		for(i = 10; i > 0; i--)
 		{
 			printf("%d seconds remaining\n", i);
@@ -67,12 +79,13 @@ int main( void )
 		// process and the return value is the PID of the newly created
 		// child process.
 		int status;
+		signal(SIGUSR1, sig_handler);
 
 		// Force the parent process to wait until the child process 
 		// exits
 		waitpid(pid, &status, 0 );
-		printf("Countdown is complete.\n");
-		fflush( NULL );
+    	fflush( NULL );
+		
 	}
 	return EXIT_SUCCESS;
 }

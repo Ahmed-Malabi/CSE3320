@@ -32,11 +32,6 @@ fork() a child and print a message from the parent and
 a message from the child
 */
 
-void interupt_parent(int ppid)
-{
-	kill(ppid, SIGUSR1);
-}
-
 void sig_handler(int signum)
 {
 	if(signum == SIGALRM)

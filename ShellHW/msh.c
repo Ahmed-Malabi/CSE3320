@@ -98,10 +98,10 @@ int main()
 		{
 			// add command to the history
 			
-			if ( cmdCounter < HISTORY ) )
+			if ( cmdCounter < HISTORY )
 			{
 				strcpy(cmdHistory[cmdCounter], token[0]);
-				cmdCounter++;;
+				cmdCounter++;
 			}
 			else
 			{
@@ -130,17 +130,17 @@ int main()
 			else if ( !strcmp(token[0],"history") )
 			{
 				i = 0;
-				while ( strcmp(cmdHistory[i],"") && i < HISTORY)
+				while ( i < HISTORY && strcmp(cmdHistory[i],""))
 				{
-					printf("%d: %s\n", i, cmdHistory[i]);
+					printf("%d: %s\n", i+1, cmdHistory[i]);
 					i++;
 				}
 			}
 			else if ( !strcmp(token[0],"showpid") )
 			{
 				i = 0;
-				while ( pidHistory[i] != 0 && i < HISTORY)
-					printf("%d: %d\n", i, pidHistory[i++]);
+				while ( i < HISTORY && pidHistory[i] != 0)
+					printf("%d: %d\n", i+1, pidHistory[i++]);
 			}
 			else
 			{
@@ -150,7 +150,10 @@ int main()
 					// let exec handle user input and errors
 					int ret = execvp( token[0], &token[0]);
 					if ( ret == -1 )
+					{
 						perror("exec failed: ");
+						exit(0);
+					}
 				}
 				else
 				{

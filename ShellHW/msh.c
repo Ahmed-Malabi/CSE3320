@@ -44,14 +44,12 @@
 
 int main()
 {
-	int i, cmdCounter, pidCounter;
+	int i, cmdCounter, pidCounter, recall;
 	int pidHistory[HISTORY] = {};
-
-	char * cmd_str = (char*) malloc( MAX_COMMAND_SIZE );
-	char** cmdHistory;
-	cmdHistory = malloc((HISTORY + 1) * sizeof(char*));
+	char* cmd_str = (char*) malloc( MAX_COMMAND_SIZE );
+	char* cmdHistory[HISTORY];
 	for ( i = 0; i < HISTORY; i++ )
-		cmdHistory[i] = malloc(MAX_COMMAND_SIZE);
+		cmdHistory[i] = (char*) malloc(MAX_COMMAND_SIZE);
 		
 
 	while( 1 )
@@ -98,9 +96,40 @@ int main()
 		{
 			// add command to the history
 			
+			
+			if ( token[0][0] == '!' )
+			{
+				char num[3];
+				for ( i = 1; i < 3; i++ )
+				{
+					num[i-1] = token[0][i];
+				}
+				num[i-1] = '\n';
+				
+				recall = atoi(num);
+				
+				token_count = 0;
+				
+				cmd_str = strdup( cmdHistory[recall - 1] );
+				working_str = strdup( cmd_str );
+				temp = working_str;
+				working_root = working_str;
+				
+				while ( ( (argument_ptr = strsep(&working_str, WHITESPACE ) ) != NULL) && 
+				  		(token_count<MAX_NUM_ARGUMENTS))
+				{
+					token[token_count] = strndup( argument_ptr, MAX_COMMAND_SIZE );
+					if ( strlen( token[token_count] ) == 0 )
+					{
+						token[token_count] = NULL;
+					}
+						token_count++;
+				}
+			}
+			
 			if ( cmdCounter < HISTORY )
 			{
-				strcpy(cmdHistory[cmdCounter], token[0]);
+				cmdHistory[cmdCounter] = strdup( cmd_str );
 				cmdCounter++;
 			}
 			else
@@ -108,9 +137,9 @@ int main()
 				// rotate the history up the list if history is full
 				for ( i = 0; i < (HISTORY - 1); i++ )
 				{
-					strcpy(cmdHistory[i], cmdHistory[i+1]);
-				}
-				strcpy(cmdHistory[i], token[0]);
+					cmdHistory[i] = strdup( cmdHistory[i+1] );
+				} 
+				cmdHistory[i] = strdup( cmd_str );
 			}
 			
 			// check user input to determine if it needs to be an
@@ -132,7 +161,7 @@ int main()
 				i = 0;
 				while ( i < HISTORY && strcmp(cmdHistory[i],""))
 				{
-					printf("%d: %s\n", i+1, cmdHistory[i]);
+					printf("%d: %s", i+1, cmdHistory[i]);
 					i++;
 				}
 			}
@@ -148,7 +177,7 @@ int main()
 				if ( pid == 0 )
 				{
 					// let exec handle user input and errors
-					int ret = execvp( token[0], &token[0]);
+					int ret = execvp( token[0], &token[0] );
 					if ( ret == -1 )
 					{
 						perror("exec failed: ");

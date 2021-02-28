@@ -44,9 +44,8 @@
 
 int main()
 {
-	int i, cmdCounter, pidCounter, recall;
+	int i, cmdCounter, pidCounter, recall, goAhead;
 	int pidHistory[HISTORY] = {};
-	char* temp;
 	char* cmd_str = (char*) malloc( MAX_COMMAND_SIZE );
 	char* cmdHistory[HISTORY];
 	for ( i = 0; i < HISTORY; i++ )
@@ -93,11 +92,11 @@ int main()
 				token_count++;
 		}
 		
+		// All code below are commands based apon what they entered
 		if ( token[0] != NULL )
-		{
-			// add command to the history
-			
-			
+		{	
+			// initilizing goahead to true... this will come in use later
+			goAhead = 1;
 			if ( token[0][0] == '!' )
 			{
 				char num[3];
@@ -108,106 +107,118 @@ int main()
 				num[i-1] = '\n';
 				
 				recall = atoi(num);
-				
-				token_count = 0;
-				
-				cmd_str = strdup( cmdHistory[recall - 1] );
-				working_str = strdup( cmd_str );
-				temp = working_str;
-				working_root = working_str;
-				
-				while ( ( (argument_ptr = strsep(&working_str, WHITESPACE ) ) != NULL) && 
-				  		(token_count<MAX_NUM_ARGUMENTS))
+				if(recall <= cmdCounter)
 				{
-					token[token_count] = strndup( argument_ptr, MAX_COMMAND_SIZE );
-					if ( strlen( token[token_count] ) == 0 )
+					token_count = 0;
+					
+					cmd_str = strdup( cmdHistory[recall - 1] );
+					working_str = strdup( cmd_str );
+					working_root = working_str;
+					
+					while ( ( (argument_ptr = strsep(&working_str, WHITESPACE ) ) != NULL) && 
+							(token_count<MAX_NUM_ARGUMENTS))
 					{
-						token[token_count] = NULL;
-					}
-						token_count++;
-				}
-			}
-			
-			if ( cmdCounter < HISTORY )
-			{
-				cmdHistory[cmdCounter] = strdup( cmd_str );
-				cmdCounter++;
-			}
-			else
-			{
-				// rotate the history up the list if history is full
-				for ( i = 0; i < (HISTORY - 1); i++ )
-				{
-					cmdHistory[i] = strdup( cmdHistory[i+1] );
-				} 
-				cmdHistory[i] = strdup( cmd_str );
-			}
-			
-			// check user input to determine if it needs to be an
-			// inbuilt function or if we can just delegate to execpv
-
-		 	if ( !strcmp(token[0],"quit") || !strcmp(token[0],"exit") )
-			{
-				exit( 0 );
-			}
-			else if ( !strcmp(token[0],"cd") )
-			{
-				if( chdir(token[1]) )
-				{
-					perror(token[1]);
-				}
-			}
-			else if ( !strcmp(token[0],"history") )
-			{
-				i = 0;
-				while ( i < HISTORY && strcmp(cmdHistory[i],""))
-				{
-					printf("%d: %s", i+1, cmdHistory[i]);
-					i++;
-				}
-			}
-			else if ( !strcmp(token[0],"showpid") )
-			{
-				i = 0;
-				while ( i < HISTORY && pidHistory[i] != 0)
-					printf("%d: %d\n", i+1, pidHistory[i++]);
-			}
-			else
-			{
-				pid_t pid = fork();
-				if ( pid == 0 )
-				{
-					// let exec handle user input and errors
-					int ret = execvp( token[0], &token[0] );
-					if ( ret == -1 )
-					{
-						perror("exec failed: ");
-						exit(0);
+						token[token_count] = strndup( argument_ptr, MAX_COMMAND_SIZE );
+						if ( strlen( token[token_count] ) == 0 )
+						{
+							token[token_count] = NULL;
+						}
+							token_count++;
 					}
 				}
 				else
 				{
-					int status;
-					
-					// add pid to the history
-					// reused from cmdHisory
+					printf("History %s does not exist\n", token[0]);
+					goAhead = 0;
+				}
+			}
 			
-					if ( pidCounter < HISTORY )
+			if(goAhead)
+			{
+				if ( cmdCounter < HISTORY )
+				{
+					cmdHistory[cmdCounter] = strdup( cmd_str );
+					cmdCounter++;
+				}
+				else
+				{
+					// rotate the history up the list if history is full
+					for ( i = 0; i < (HISTORY - 1); i++ )
 					{
-						pidHistory[pidCounter] = pid;
-						pidCounter++; 
+						cmdHistory[i] = strdup( cmdHistory[i+1] );
+					} 
+					cmdHistory[i] = strdup( cmd_str );
+				}
+				
+				// check user input to determine if it needs to be an
+				// inbuilt function or if we can just delegate to execpv
+
+				if ( !strcmp(token[0],"quit") || !strcmp(token[0],"exit") )
+				{
+					exit( 0 );
+				}
+				else if ( !strcmp(token[0],"cd") )
+				{
+					if( chdir(token[1]) )
+					{
+						perror(token[1]);
+					}
+				}
+				else if ( !strcmp(token[0],"history") )
+				{
+					i = 0;
+					while ( i < HISTORY && strcmp(cmdHistory[i],""))
+					{
+						printf("%d: %s", i+1, cmdHistory[i]);
+						i++;
+					}
+				}
+				else if ( !strcmp(token[0],"showpid") )
+				{
+					i = 0;
+					while ( i < HISTORY && pidHistory[i] != 0)
+					{
+						printf("%d: %d\n", i+1, pidHistory[i]);
+						i++;
+					}
+				}
+				else
+				{
+					pid_t pid = fork();
+					if ( pid == 0 )
+					{
+						// let exec handle user input and errors
+						int ret = execvp( token[0], &token[0] );
+						if ( ret == -1 )
+						{
+							perror("exec failed: ");
+							exit(0);
+						}
 					}
 					else
 					{
-						// rotate the history up the list if history is full
-						for ( i = 0; i < HISTORY - 1; i++ )
+						int status;
+						
+						// add pid to the history
+						// reused from cmdHisory
+				
+						if ( pidCounter < HISTORY )
 						{
-							pidHistory[i] = pidHistory[i+1];
+							pidHistory[pidCounter] = pid;
+							pidCounter++; 
 						}
-						pidHistory[i] = pid;
+						else
+						{
+							// rotate the history up the list if history is full
+							for ( i = 0; i < HISTORY - 1; i++ )
+							{
+								pidHistory[i] = pidHistory[i+1];
+							}
+							pidHistory[i] = pid;
+						}
+						
+						wait( &status );
 					}
-					
-					wait( &status );
 				}
 			}
 		}

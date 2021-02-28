@@ -38,7 +38,7 @@
 
 #define MAX_COMMAND_SIZE 255		// The maximum command-line size
 
-#define MAX_NUM_ARGUMENTS 11     // Mav shell only supports 11 arguments
+#define MAX_NUM_ARGUMENTS 11     	// Mav shell only supports 11 arguments
 
 #define HISTORY 15					// The size of history including null terminator
 

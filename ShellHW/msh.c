@@ -46,6 +46,7 @@ int main()
 {
 	int i, cmdCounter, pidCounter, recall;
 	int pidHistory[HISTORY] = {};
+	char* temp;
 	char* cmd_str = (char*) malloc( MAX_COMMAND_SIZE );
 	char* cmdHistory[HISTORY];
 	for ( i = 0; i < HISTORY; i++ )

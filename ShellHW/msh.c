@@ -31,7 +31,7 @@
 #include <string.h>
 #include <signal.h>
 
-#define WHITESPACE " \t\n"			// We want to split our command line up into tokens
+#define WHITESPACE " \t\n"			// We want to split our command line up into tokens 
                          			// so we need to define what delimits our tokens.
                          			// In this case  white space
                             		// will separate the tokens on our command line
@@ -97,6 +97,8 @@ int main()
 		{	
 			// initilizing goahead to true... this will come in use later
 			goAhead = 1;
+
+			// If the bang command is called then we need to get the integer value entered
 			if ( token[0][0] == '!' )
 			{
 				char num[3];
@@ -109,6 +111,8 @@ int main()
 				recall = atoi(num);
 				if(recall <= cmdCounter)
 				{
+					// reusing the tokenization from earlier except replacing cmd_str 
+					// with the specific command from history
 					token_count = 0;
 					
 					cmd_str = strdup( cmdHistory[recall - 1] );
@@ -128,6 +132,7 @@ int main()
 				}
 				else
 				{
+					// if the item doesn't exist we skip over the rest of the code
 					printf("History %s does not exist\n", token[0]);
 					goAhead = 0;
 				}
@@ -135,6 +140,7 @@ int main()
 			
 			if(goAhead)
 			{
+				// copies the entire input into an array of the 15 most recent inputs
 				if ( cmdCounter < HISTORY )
 				{
 					cmdHistory[cmdCounter] = strdup( cmd_str );
@@ -151,7 +157,7 @@ int main()
 				}
 				
 				// check user input to determine if it needs to be an
-				// inbuilt function or if we can just delegate to execpv
+				// inbuilt function or if we can just delegate to execvp
 
 				if ( !strcmp(token[0],"quit") || !strcmp(token[0],"exit") )
 				{
@@ -191,6 +197,7 @@ int main()
 						int ret = execvp( token[0], &token[0] );
 						if ( ret == -1 )
 						{
+							printf("%s is an unrecognized command\n", token[0]);
 							perror("exec failed: ");
 							exit(0);
 						}

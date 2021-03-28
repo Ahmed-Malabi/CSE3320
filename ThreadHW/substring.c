@@ -5,7 +5,7 @@
 #include <pthread.h>
 
 #define MAX 5000000
-#define THREADS 2
+#define THREADS 4
 
 int total = 0;
 int n1,n2 ; 

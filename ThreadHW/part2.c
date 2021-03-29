@@ -60,7 +60,7 @@ void* getText(void* arg)
     //  opens the file message.txt as it was the requirement
     if((fp = fopen("message.txt", "r")) == NULL)
     {
-        printf("ERROR: can’t open %s!\n", "messgae.txt");
+        printf("ERROR: can’t open %s!\n", "message.txt");
         return 0;
     }
 
@@ -84,7 +84,8 @@ void* getText(void* arg)
     }
 }
 
-/*  main just initilized all threads and
+/*  
+    main just initilized all threads and
     semaphores and then calls and waits for 
     the threads to return.
 */
@@ -93,7 +94,7 @@ int main()
     pthread_t producer_tid;  
     pthread_t consumer_tid;  
 
-    sem_init(&textProducer, NONSHARED, 5);
+    sem_init(&textProducer, NONSHARED, BUFFERSIZE);
     sem_init(&textConsumer, NONSHARED, 0);  
     
     pthread_create(&producer_tid, NULL, getText, NULL);

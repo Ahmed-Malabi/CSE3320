@@ -5,7 +5,7 @@
 #include <pthread.h>
 
 #define MAX 5000000
-#define THREADS 4
+#define THREADS 1
 
 int total = 0;
 int n1,n2 ; 
@@ -55,17 +55,22 @@ void* num_substring ( void* temp )
 {
     int tid = *(int*)temp;
     int i,j,k, start, end;
+
+    //  modified start and end to be based
+    //  off thread id instead of entire string
     start = (tid) * (n1/THREADS);
     end = ((tid + 1) * (n1/THREADS));
     int count;
     int extra = 0;
 
-    if(tid != THREADS -1)
-        end += n2-1;
 
     for (i = start; i <= end + extra; i++)
     {
         count = 0;
+
+        //  if we are not on the last thread we
+        //  overlap by n2-1 incase a word would
+        //  be split by the threads.
         for(j = i,k = 0; k < n2; j++,k++)
         { /*search for the next string of size of n2*/
             if (*(s1+j) != *(s2+k))
@@ -78,6 +83,9 @@ void* num_substring ( void* temp )
             }
             if (count == n2)
             {
+                //  lock the total when it is being incremented
+                //  to prevent back tracking if a thread is 
+                //  interupted
                 pthread_mutex_lock( &mutex );
                 total++; /*find a substring in this step*/
                 pthread_mutex_unlock( &mutex );
@@ -107,6 +115,7 @@ int main(int argc, char *argv[])
 
     gettimeofday(&start, NULL);
 
+    //  calls num_substring for each thread passing in its id
     for(i = 0; i < THREADS; i++)
     {
         id[i] = i;
@@ -116,6 +125,8 @@ int main(int argc, char *argv[])
             exit( EXIT_FAILURE ); 
         }
     }
+
+    //  rejoins all the threads into an array
     for(i = 0; i < THREADS; i++)
     {
         if(pthread_join(threads[i], NULL)) 

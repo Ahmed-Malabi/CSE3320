@@ -1,3 +1,7 @@
+//  to compile this program use gcc part2.c -lpthread
+//  and use ./a.out with a txt file message.txt in the 
+//  same directory where message.txt is any text file 
+
 #include <stdlib.h>
 #include <pthread.h>
 #include <stdio.h>

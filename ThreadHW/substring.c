@@ -1,3 +1,7 @@
+//  to compile this program use gcc substring.c -lpthread
+//  and use ./a.out [*.txt] with *.txt being a text file
+//  formated as 2 lines
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

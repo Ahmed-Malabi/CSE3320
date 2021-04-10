@@ -6,11 +6,11 @@ int main()
 {
   char * ptr1 = ( char * ) malloc ( 1000 );
   char * buf1 = ( char * ) malloc ( 1 );
-  char * ptr6= ( char * ) malloc ( 10 );
+  char * ptr6 = ( char * ) malloc ( 10 );
   char * buf2 = ( char * ) malloc ( 1 );
   char * ptr2 = ( char * ) malloc ( 6000 );
   char * buf3 = ( char * ) malloc ( 1 );
-  char * ptr7= ( char * ) malloc ( 10 );
+  char * ptr7 = ( char * ) malloc ( 10 );
   char * buf4 = ( char * ) malloc ( 1 );
   char * ptr3 = ( char * ) malloc ( 1000 );
 

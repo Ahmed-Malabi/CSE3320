@@ -47,8 +47,8 @@ void printStatistics( void )
 struct _block 
 {
    size_t  size;         /* Size of the allocated _block of memory in bytes */
-   struct _block *prev;  /* Pointer to the previous _block of allcated memory   */
-   struct _block *next;  /* Pointer to the next _block of allcated memory   */
+   struct _block *prev;  /* Pointer to the previous _block of allocated memory   */
+   struct _block *next;  /* Pointer to the next _block of allocated memory   */
    bool   free;          /* Is this _block free?                     */
    char   padding[3];
 };
@@ -71,6 +71,7 @@ struct _block *heapList = NULL; /* Free list to track the _blocks available */
 struct _block *findFreeBlock(struct _block **last, size_t size) 
 {
    struct _block *curr = heapList;
+   num_blocks++;
 
 #if defined FIT && FIT == 0
    /* First fit */
@@ -138,6 +139,7 @@ struct _block *growHeap(struct _block *last, size_t size)
    curr->size = size;
    curr->next = NULL;
    curr->free = false;
+   max_heap += size;
    return curr;
 }
 
@@ -155,7 +157,8 @@ struct _block *growHeap(struct _block *last, size_t size)
  */
 void *malloc(size_t size) 
 {
-
+   num_mallocs++;
+   num_requested += size;
    if( atexit_registered == 0 )
    {
       atexit_registered = 1;
@@ -175,11 +178,10 @@ void *malloc(size_t size)
    struct _block *last = heapList;
    struct _block *next = findFreeBlock(&last, size);
 
-   /* TODO: Split free _block if possible */
-
    /* Could not find free _block, so grow heap */
    if (next == NULL) 
    {
+      num_grows++;
       next = growHeap(last, size);
    }
 
@@ -208,6 +210,7 @@ void *malloc(size_t size)
  */
 void free(void *ptr) 
 {
+   num_frees++;
    if (ptr == NULL) 
    {
       return;
@@ -217,8 +220,6 @@ void free(void *ptr)
    struct _block *curr = BLOCK_HEADER(ptr);
    assert(curr->free == 0);
    curr->free = true;
-
-   /* TODO: Coalesce free _blocks if needed */
 }
 
 /* vim: set expandtab sts=3 sw=3 ts=6 ft=cpp: --------------------------------*/

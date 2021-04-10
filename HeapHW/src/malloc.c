@@ -71,7 +71,6 @@ struct _block *heapList = NULL; /* Free list to track the _blocks available */
 struct _block *findFreeBlock(struct _block **last, size_t size) 
 {
    struct _block *curr = heapList;
-   num_blocks++;
 
 #if defined FIT && FIT == 0
    /* First fit */
@@ -83,11 +82,71 @@ struct _block *findFreeBlock(struct _block **last, size_t size)
 #endif
 
 #if defined BEST && BEST == 0
-   printf("TODO: Implement best fit here\n");
+   size_t leftover = -1;
+   int i, fit;
+   i = 0;
+   while (curr)
+   {
+      if(curr->free && curr->size >= size)
+      {
+         if(leftover == -1)
+         {
+            leftover = curr->size - size;
+            fit = i;
+         }
+         else if(leftover > (curr->size - size))
+         {
+            leftover = curr->size - size;
+            fit = i;
+         }
+      }
+      curr  = curr->next;
+      i++;
+   }
+
+   curr = heapList;
+   i = 0;
+
+   while((i != fit+1) && curr)
+   {
+      *last = curr;
+      curr = curr->next;
+      i++;
+   }
 #endif
 
 #if defined WORST && WORST == 0
-   printf("TODO: Implement worst fit here\n");
+   size_t leftover = -1;
+   int i, fit;
+   i = 0;
+   while (curr)
+   {
+      if(curr->free && curr->size >= size)
+      {
+         if(leftover == -1)
+         {
+            leftover = curr->size - size;
+            fit = i;
+         }
+         else if(leftover < (curr->size - size))
+         {
+            leftover = curr->size - size;
+            fit = i;
+         }
+      }
+      curr  = curr->next;
+      i++;
+   }
+
+   curr = heapList;
+   i = 0;
+
+   while((i != fit+1) && curr)
+   {
+      *last = curr;
+      curr = curr->next;
+      i++;
+   }
 #endif
 
 #if defined NEXT && NEXT == 0
@@ -139,7 +198,6 @@ struct _block *growHeap(struct _block *last, size_t size)
    curr->size = size;
    curr->next = NULL;
    curr->free = false;
-   max_heap += size;
    return curr;
 }
 
@@ -157,8 +215,6 @@ struct _block *growHeap(struct _block *last, size_t size)
  */
 void *malloc(size_t size) 
 {
-   num_mallocs++;
-   num_requested += size;
    if( atexit_registered == 0 )
    {
       atexit_registered = 1;
@@ -210,7 +266,6 @@ void *malloc(size_t size)
  */
 void free(void *ptr) 
 {
-   num_frees++;
    if (ptr == NULL) 
    {
       return;

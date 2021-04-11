@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define ALIGN4(s)         (((((s) - 1) >> 2) << 2) + 4)
 #define BLOCK_DATA(b)      ((b) + 1)
@@ -13,8 +14,8 @@ static int num_mallocs       = 0;
 static int num_frees         = 0;
 static int num_reuses        = 0;
 static int num_grows         = 0;
-static int num_splits        = 0;
-static int num_coalesces     = 0;
+//static int num_splits        = 0;
+//static int num_coalesces     = 0;
 static int num_blocks        = 0;
 static int num_requested     = 0;
 static int max_heap          = 0;
@@ -36,8 +37,8 @@ void printStatistics( void )
   printf("frees:\t\t%d\n", num_frees );
   printf("reuses:\t\t%d\n", num_reuses );
   printf("grows:\t\t%d\n", num_grows );
-  printf("splits:\t\t%d\n", num_splits );
-  printf("coalesces:\t%d\n", num_coalesces );
+  //printf("splits:\t\t%d\n", num_splits );
+  //printf("coalesces:\t%d\n", num_coalesces );
   printf("blocks:\t\t%d\n", num_blocks );
   printf("requested:\t%d\n", num_requested );
   printf("max heap:\t%d\n", max_heap );
@@ -54,6 +55,7 @@ struct _block
 
 
 struct _block *heapList = NULL; /* Free list to track the _blocks available */
+struct _block *previous = NULL;
 
 /*
  * \brief findFreeBlock
@@ -131,9 +133,24 @@ struct _block *findFreeBlock(struct _block **last, size_t size)
 #endif
 
 #if defined NEXT && NEXT == 0
-   printf("TODO: Implement next fit here\n");
+   if(previous != NULL)
+      curr = previous;
+
+   while (curr && !(curr->free && curr->size >= size)) 
+   {
+      if(!curr)
+      {
+         curr = heapList;
+      }
+      else
+      {
+         *last = curr;
+         curr  = curr->next;
+      }
+   }
 #endif
 
+   previous = curr;
    return curr;
 }
 
@@ -205,43 +222,59 @@ void *malloc(size_t size)
       atexit_registered = 1;
       atexit( printStatistics );
    }
+      /* Align to multiple of 4 */
+      size = ALIGN4(size);
 
-   /* Align to multiple of 4 */
-   size = ALIGN4(size);
+      /* Handle 0 size */
+      if (size == 0) 
+      {
+         return NULL;
+      }
 
-   /* Handle 0 size */
-   if (size == 0) 
-   {
-      return NULL;
-   }
+      /* Look for free _block */
+      struct _block *last = heapList;
+      struct _block *next = findFreeBlock(&last, size);
 
-   /* Look for free _block */
-   struct _block *last = heapList;
-   struct _block *next = findFreeBlock(&last, size);
+      /* Could not find free _block, so grow heap */
+      if (next == NULL) 
+      {
+         num_grows++;
+         next = growHeap(last, size);
+      }
+      else
+      {
+         num_reuses++;
+      }
 
-   /* Could not find free _block, so grow heap */
-   if (next == NULL) 
-   {
-      num_grows++;
-      next = growHeap(last, size);
-   }
-   else
-   {
-      num_reuses++;
-   }
+      /* Could not find free _block or grow heap, so just return NULL */
+      if (next == NULL) 
+      {
+         return NULL;
+      }
+      
 
-   /* Could not find free _block or grow heap, so just return NULL */
-   if (next == NULL) 
-   {
-      return NULL;
-   }
+      /* Mark _block as in use */
+      next->free = false;
    
-
-   /* Mark _block as in use */
-   next->free = false;
-
    /* Return data address associated with _block */
    return BLOCK_DATA(next);
+}
+
+void *calloc(size_t memb, size_t size)
+{
+   void *ptr;
+   ptr = malloc((memb * size));
+   memset(ptr, '\0', (memb * size));
+   return ptr;
+}
+
+void *realloc(void* ptr, size_t size)
+{
+   void *new;
+   new = malloc(size);
+   memcpy(new, ptr, size);
+   free(ptr);
+   return new;
 }
 
 /*

@@ -83,19 +83,25 @@ struct _block *findFreeBlock(struct _block **last, size_t size)
 #endif
 
 #if defined BEST && BEST == 0
+   /*  
+    * Best Fit
+    *
+    * best fit searches through the heap in search of
+    * the block with the least amount of wasted space
+    */
    struct _block *winner = NULL;
    size_t leftover = -1;
-   while (curr)
+   while (curr)                                       // If we are not NULL keep going
    {
-      if(curr->free && (curr->size >= size))
+      if(curr->free && (curr->size >= size))          // If the spot is large enough:
       {
-         if(leftover == -1)
+         if(leftover == -1)                           // Will take the first available
          {
-            leftover = curr->size - size;
-            winner = curr;
+            leftover = curr->size - size;             
+            winner = curr;                            // Set winner to best fit
          }
-         else if(leftover > (curr->size - size))
-         {
+         else if(leftover > (curr->size - size))      // Compare leftover to previous
+         {                                            // we want a smaller leftover
             leftover = curr->size - size;
             winner = curr;
          }
@@ -104,23 +110,29 @@ struct _block *findFreeBlock(struct _block **last, size_t size)
       curr  = curr->next;
    }
 
-   curr = winner;
+   curr = winner;                                     // Set block to best fit
 #endif
 
 #if defined WORST && WORST == 0
+   /*  
+    * Worst Fit
+    *
+    * worst fit searches through  the heap in search of
+    * the block with the largest amount of wasted space
+    */
    struct _block *winner = NULL;
    size_t leftover = -1;
-   while (curr)
+   while (curr)                                       // If we are not NULL keep going
    {
-      if(curr->free && (curr->size >= size))
+      if(curr->free && (curr->size >= size))          // If the spot is large enough:
       {
-         if(leftover == -1)
+         if(leftover == -1)                           // Will take the first available
          {
             leftover = curr->size - size;
-            winner = curr;
+            winner = curr;                            // Set winner to best fit
          }
-         else if(leftover < (curr->size - size))
-         {
+         else if(leftover < (curr->size - size))      // Compare leftover to previous
+         {                                            // we want a larger leftover
             leftover = curr->size - size;
             winner = curr;
          }
@@ -129,10 +141,16 @@ struct _block *findFreeBlock(struct _block **last, size_t size)
       curr  = curr->next;
    }
 
-   curr = winner;
+   curr = winner;                                     // Set block to worst fit
 #endif
 
 #if defined NEXT && NEXT == 0
+   /*  
+    * Next Fit
+    *
+    * next fit looks through the entire heap for the first
+    * spot  starting  from  the  previous  malloc  pointer
+    */
    if(previous != NULL)
       curr = previous;
 
@@ -260,6 +278,17 @@ void *malloc(size_t size)
    return BLOCK_DATA(next);
 }
 
+/*
+ * \breif calloc
+ * 
+ * calls malloc based on number and size of elements
+ * then   initilizes   all   the  space  to  nothing
+ * 
+ * \param memb number of of elements
+ * \param size size of each element
+ * 
+ * \returns the ptr created
+ */ 
 void *calloc(size_t memb, size_t size)
 {
    void *ptr;
@@ -268,6 +297,18 @@ void *calloc(size_t memb, size_t size)
    return ptr;
 }
 
+/*
+ * \breif realloc
+ * 
+ * calls malloc with a new size passed in then
+ * copys the old data into the new pointer
+ * then frees the old pointer
+ * 
+ * \param ptr old pointer previously malloc
+ * \param size size of the array to be malloced
+ * 
+ * \returns the ptr created
+ */ 
 void *realloc(void* ptr, size_t size)
 {
    void *new;

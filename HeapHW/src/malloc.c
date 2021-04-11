@@ -6,8 +6,7 @@
 
 #define ALIGN4(s)         (((((s) - 1) >> 2) << 2) + 4)
 #define BLOCK_DATA(b)      ((b) + 1)
-#define BLOCK_HEADER(ptr)   ((struct _block *)(ptr) - 1)
-
+#define BLOCK_HEADER(ptr)   ((struct _block *)(ptr) - 1) 
 
 static int atexit_registered = 0;
 static int num_mallocs       = 0;
@@ -82,71 +81,53 @@ struct _block *findFreeBlock(struct _block **last, size_t size)
 #endif
 
 #if defined BEST && BEST == 0
+   struct _block *winner = NULL;
    size_t leftover = -1;
-   int i, fit;
-   i = 0;
    while (curr)
    {
-      if(curr->free && curr->size >= size)
+      if(curr->free && (curr->size >= size))
       {
          if(leftover == -1)
          {
             leftover = curr->size - size;
-            fit = i;
+            winner = curr;
          }
          else if(leftover > (curr->size - size))
          {
             leftover = curr->size - size;
-            fit = i;
+            winner = curr;
          }
       }
-      curr  = curr->next;
-      i++;
-   }
-
-   curr = heapList;
-   i = 0;
-
-   while((i != fit+1) && curr)
-   {
       *last = curr;
-      curr = curr->next;
-      i++;
+      curr  = curr->next;
    }
+
+   curr = winner;
 #endif
 
 #if defined WORST && WORST == 0
+   struct _block *winner = NULL;
    size_t leftover = -1;
-   int i, fit;
-   i = 0;
    while (curr)
    {
-      if(curr->free && curr->size >= size)
+      if(curr->free && (curr->size >= size))
       {
          if(leftover == -1)
          {
             leftover = curr->size - size;
-            fit = i;
+            winner = curr;
          }
          else if(leftover < (curr->size - size))
          {
             leftover = curr->size - size;
-            fit = i;
+            winner = curr;
          }
       }
-      curr  = curr->next;
-      i++;
-   }
-
-   curr = heapList;
-   i = 0;
-
-   while((i != fit+1) && curr)
-   {
       *last = curr;
-      curr = curr->next;
-      i++;
+      curr  = curr->next;
    }
+
+   curr = winner;
 #endif
 
 #if defined NEXT && NEXT == 0
@@ -170,9 +151,11 @@ struct _block *findFreeBlock(struct _block **last, size_t size)
  */
 struct _block *growHeap(struct _block *last, size_t size) 
 {
+   num_blocks++;
    /* Request more space from OS */
    struct _block *curr = (struct _block *)sbrk(0);
    struct _block *prev = (struct _block *)sbrk(sizeof(struct _block) + size);
+   max_heap += sizeof(struct _block) + size;
 
    assert(curr == prev);
 
@@ -214,7 +197,9 @@ struct _block *growHeap(struct _block *last, size_t size)
  * or NULL if failed
  */
 void *malloc(size_t size) 
-{
+{ 
+   num_mallocs++;
+   num_requested += size;
    if( atexit_registered == 0 )
    {
       atexit_registered = 1;
@@ -240,6 +225,10 @@ void *malloc(size_t size)
       num_grows++;
       next = growHeap(last, size);
    }
+   else
+   {
+      num_reuses++;
+   }
 
    /* Could not find free _block or grow heap, so just return NULL */
    if (next == NULL) 
@@ -247,6 +236,7 @@ void *malloc(size_t size)
       return NULL;
    }
    
+
    /* Mark _block as in use */
    next->free = false;
 
@@ -266,6 +256,7 @@ void *malloc(size_t size)
  */
 void free(void *ptr) 
 {
+   num_frees++;
    if (ptr == NULL) 
    {
       return;

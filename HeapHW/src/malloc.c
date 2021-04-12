@@ -14,8 +14,8 @@ static int num_mallocs       = 0;
 static int num_frees         = 0;
 static int num_reuses        = 0;
 static int num_grows         = 0;
-//static int num_splits        = 0;
-//static int num_coalesces     = 0;
+static int num_splits        = 0;
+static int num_coalesces     = 0;
 static int num_blocks        = 0;
 static int num_requested     = 0;
 static int max_heap          = 0;
@@ -37,8 +37,8 @@ void printStatistics( void )
   printf("frees:\t\t%d\n", num_frees );
   printf("reuses:\t\t%d\n", num_reuses );
   printf("grows:\t\t%d\n", num_grows );
-  //printf("splits:\t\t%d\n", num_splits );
-  //printf("coalesces:\t%d\n", num_coalesces );
+  printf("splits:\t\t%d\n", num_splits );
+  printf("coalesces:\t%d\n", num_coalesces );
   printf("blocks:\t\t%d\n", num_blocks );
   printf("requested:\t%d\n", num_requested );
   printf("max heap:\t%d\n", max_heap );
@@ -242,7 +242,7 @@ struct _block *growHeap(struct _block *last, size_t size)
  */
 void *malloc(size_t size) 
 { 
-   num_mallocs++;
+   
    num_requested += size;
    if( atexit_registered == 0 )
    {
@@ -284,6 +284,7 @@ void *malloc(size_t size)
       next->free = false;
    
    /* Return data address associated with _block */
+   num_mallocs++;
    return BLOCK_DATA(next);
 }
 

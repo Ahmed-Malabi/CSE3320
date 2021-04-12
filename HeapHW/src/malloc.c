@@ -156,15 +156,24 @@ struct _block *findFreeBlock(struct _block **last, size_t size)
 
    while (curr && !(curr->free && curr->size >= size)) 
    {
-      if(!curr)
-      {
-         curr = heapList;
-      }
-      else
+
+      *last = curr;
+      curr  = curr->next;
+   }
+   
+   if(!curr)
+   {
+      curr = heapList;
+      while(curr != previous && !(curr->free && curr->size >= size))
       {
          *last = curr;
          curr  = curr->next;
       }
+   }
+
+   if(curr == previous)
+   {
+      curr = NULL;
    }
 #endif
 
@@ -289,7 +298,7 @@ void *malloc(size_t size)
  * 
  * \returns the ptr created
  */ 
-void *calloc(size_t memb, size_t size)
+void* calloc(size_t memb, size_t size)
 {
    void *ptr;
    ptr = malloc((memb * size));
@@ -309,7 +318,7 @@ void *calloc(size_t memb, size_t size)
  * 
  * \returns the ptr created
  */ 
-void *realloc(void* ptr, size_t size)
+void* realloc(void* ptr, size_t size)
 {
    void *new;
    new = malloc(size);

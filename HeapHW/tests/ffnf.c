@@ -12,7 +12,7 @@ int main()
   char * buf3 = ( char * ) malloc ( 1 );
   char * ptr7 = ( char * ) malloc ( 10 );
   char * buf4 = ( char * ) malloc ( 1 );
-  char * ptr3 = ( char * ) malloc ( 1000 );
+  char * ptr3 = ( char * ) malloc ( 100 );
 
   printf("First fit should pick this one: %p\n", ptr1 );
   printf("Next fit should pick this one: %p\n", ptr3 );

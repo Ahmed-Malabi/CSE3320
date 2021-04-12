@@ -149,7 +149,10 @@ struct _block *findFreeBlock(struct _block **last, size_t size)
     * Next Fit
     *
     * next fit looks through the entire heap for the first
-    * spot  starting  from  the  previous  malloc  pointer
+    * spot starting from the previous malloc pointer if it
+    * cant find a spot in the first pass it then  restarts
+    * and   searches   until   it   finds   a   spot    or 
+    * gets   to   the   previous   pointer   from   before
     */
    if(previous != NULL)
       curr = previous;

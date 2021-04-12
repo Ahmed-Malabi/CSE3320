@@ -198,7 +198,6 @@ struct _block *findFreeBlock(struct _block **last, size_t size)
  */
 struct _block *growHeap(struct _block *last, size_t size) 
 {
-   num_blocks++;
    /* Request more space from OS */
    struct _block *curr = (struct _block *)sbrk(0);
    struct _block *prev = (struct _block *)sbrk(sizeof(struct _block) + size);
@@ -273,6 +272,7 @@ void *malloc(size_t size)
       }
       else
       {
+         if(num_blocks > 0 ) num_blocks--;
          num_reuses++;
       }
 
@@ -344,6 +344,7 @@ void* realloc(void* ptr, size_t size)
 void free(void *ptr) 
 {
    num_frees++;
+   num_blocks++;
    if (ptr == NULL) 
    {
       return;

@@ -40,6 +40,8 @@
 
 #define MAX_COMMAND_SIZE 255    // The maximum command-line size
 
+FILE *fp = NULL;
+
 struct __attribute__((__packed__)) DirectoryEntry
 {
     char DIR_Name[11];
@@ -54,15 +56,53 @@ struct __attribute__((__packed__)) DirectoryEntry
 struct DirectoryEntry dir[16];
 
 int16_t BPB_BytsPerSec;
-int8_t  BPD_SecPerClus;
+int8_t  BPB_SecPerClus;
 int16_t BPB_RsvdSecCnt;
-int8_t  BPD_NumFATs;
-int32_t BPD_FATSz32;
+int8_t  BPB_NumFATs;
+int32_t BPB_FATSz32;
+
+int LBAToOffset(int32_t sector)
+{
+  return ((sector - 2) * BPB_BytsPerSec) + (BPB_BytsPerSec * BPB_RsvdSecCnt)
+          + (BPB_NumFATs * BPB_FATSz32 * BPB_BytsPerSec);
+}
+
+int16_t NextLB(uint32_t sector)
+{
+  uint32_t FATAddress = (BPB_BytsPerSec * BPB_RsvdSecCnt) + (sector * 4);
+  int16_t val;
+  fseek(fp, FATAddress, SEEK_SET);
+  fread(&val, 2, 1, fp);
+  return val;
+}
+
+void expand(char toExpand[12])
+{
+  char temp[12] = toExpand;
+  memset( toExpand, ' ', 12 );
+
+  char *token = strtok( temp, "." );
+
+  strncpy( temp, token, strlen( token ) );
+
+  token = strtok( NULL, "." );
+
+  if( token )
+  {
+    strncpy( (char*)(toExpand+8), token, strlen(token ) );
+  }
+
+  toExpand[11] = '\0';
+
+  int i;
+  for( i = 0; i < 11; i++ )
+  {
+    toExpand[i] = toupper( toExpand[i] );
+  }
+}
 
 int main()
 {
-  FILE *fp;
-  int close = 1;
   char * cmd_str = (char*) malloc( MAX_COMMAND_SIZE );
 
   while( 1 )
@@ -110,40 +150,45 @@ int main()
 
     if ( token[0] != NULL )
 		{
-      if ( !strcmp(token[0],"open") )
+      if ( !strcmp(token[0],"quit") )
+      {
+        break;
+      }
+      else if ( !strcmp(token[0],"open") )
 			{
         if ( fp )
         {
-          perror("Error: File system image already open.");
-          break;
+          printf("Error: File system image already open.\n");
         }
-
-        if ( sizeof(token[1]) > 100 )
+        else
         {
-          perror("Error: File name too large.");
-          break;
+          fp = fopen(token[1], "r");
+          if ( fp )
+          {
+            fseek(fp, 11, SEEK_SET);
+            fread(&BPB_BytsPerSec, 2, 1, fp);
+
+            fseek(fp, 13, SEEK_SET);
+            fread(&BPB_SecPerClus, 1, 1, fp);
+
+            fseek(fp, 14, SEEK_SET);
+            fread(&BPB_RsvdSecCnt, 2, 1, fp);
+          
+            fseek(fp, 16, SEEK_SET);
+            fread(&BPB_NumFATs, 1, 1, fp);
+
+            fseek(fp, 36, SEEK_SET);
+            fread(&BPB_FATSz32, 4, 1, fp);
+
+            int root = (BPB_NumFATs*BPB_FATSz32*BPB_BytsPerSec)+(BPB_RsvdSecCnt*BPB_BytsPerSec);
+            fseek(fp, root, SEEK_SET);
+            fread( &dir[0], sizeof(struct DirectoryEntry), 16, fp);
+          }
+          else
+          {
+            printf("Error: File system image no found.\n");
+          }
         }
-
-        if ( !fopen(fp, token[1]) )
-        {
-          perror("Error: File system image no found.");
-          break;
-        }
-
-        fseek(fp, 11, SEEK_SET);
-        fread(&BPB_BytsPerSec, 2, 1, fp);
-
-        fseek(fp, 13, SEEK_SET);
-        fread(&BPD_SecPerClus, 1, 1, fp);
-
-        fseek(fp, 14, SEEK_SET);
-        fread(&BPB_RsvdSecCnt, 2, 1, fp);
-        
-        fseek(fp, 16, SEEK_SET);
-        fread(&BPD_NumFATs, 1, 1, fp);
-
-        fseek(fp, 36, SEEK_SET);
-        fread(&BPD_FATSz32, 4, 1, fp);
 			}
       else if ( !strcmp(token[0],"close") )
       {
@@ -151,46 +196,99 @@ int main()
         {
           fclose(fp);
           fp = NULL;
-          break;
         }
-    
-        perror("Error: File system is not open.");
+        else
+        {
+          printf("Error: File system is not open.\n");
+        }
       }
       else if ( !strcmp(token[0],"info") )
       {
         if( !fp )
-          perror("Error: File system image must be opened first.");
-
-        printf("%d %x\n", BPB_BytsPerSec, BPB_BytsPerSec);
-        printf("%d %x\n", BPD_SecPerClus, BPD_SecPerClus);
-        printf("%d %x\n", BPB_RsvdSecCnt, BPB_RsvdSecCnt);
-        printf("%d %x\n", BPD_NumFATs   , BPD_NumFATs   );
-        printf("%d %x\n", BPD_FATSz32   , BPD_FATSz32   );
+        {
+          printf("Error: File system image must be opened first.\n");
+        }
+        else
+        {
+          printf("BPB_BytsPerSec:\t%-6d %-4x\n", BPB_BytsPerSec, BPB_BytsPerSec);
+          printf("BPB_SecPerClus:\t%-6d %-4x\n", BPB_SecPerClus, BPB_SecPerClus);
+          printf("BPB_RsvdSecCnt:\t%-6d %-4x\n", BPB_RsvdSecCnt, BPB_RsvdSecCnt);
+          printf("BPB_NumFATs:\t%-6d %-4x\n"   , BPB_NumFATs   , BPB_NumFATs   );
+          printf("BPB_FATSz32:\t%-6d %-4x\n"   , BPB_FATSz32   , BPB_FATSz32   );
+        }
       }
       else if ( !strcmp(token[0],"stat") )
       {
         if( !fp )
-          perror("Error: File system image must be opened first.");
+        {
+          printf("Error: File system image must be opened first.\n");
+        }
+        else
+        {
+
+        }
       }
       else if ( !strcmp(token[0],"cd") )
       {
         if( !fp )
-          perror("Error: File system image must be opened first.");
+        {
+          printf("Error: File system image must be opened first.\n");
+        }
+        else
+        {
+
+        }
       }
       else if ( !strcmp(token[0],"ls") )
       {
         if( !fp )
-          perror("Error: File system image must be opened first.");
+        {
+          printf("Error: File system image must be opened first.\n");
+        }
+        else
+        {
+          //printing contents of directory
+          int i;
+          for(i = 0; i < 16; i++)
+          {
+            //we create a temp variable in order to add null terminator
+            //to the end of the filename
+            char filename[12];
+            strncpy(&filename[0], &dir[i].DIR_Name[0], 11);
+            filename[11] = '\0';
+            if ( dir[i].DIR_Attr == 1 || dir[i].DIR_Attr == 16 || dir[i].DIR_Attr == 32 )
+            {
+              if ( dir[i].DIR_Name[0] != 0x00 && dir[i].DIR_Name[0] != 0xe5 )
+                printf("%s\n", filename);
+            }
+          }
+        }
       }
       else if ( !strcmp(token[0],"get") )
       {
         if( !fp )
-          perror("Error: File system image must be opened first.");
+        {
+          printf("Error: File system image must be opened first.\n");
+        }
+        else
+        {
+
+        }
       }
       else if ( !strcmp(token[0],"read") )
       {
         if( !fp )
-          perror("Error: File system image must be opened first.");
+        {
+          printf("Error: File system image must be opened first.\n");
+        }
+        else
+        {
+
+        }
+      }
+      else
+      {
+        printf("%s: command not found\n", token[0]);
       }
     }
 

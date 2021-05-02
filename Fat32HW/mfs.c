@@ -249,8 +249,8 @@ void readFile(char* token1, char* token2, char* token3)
 
 void getFile(char* token)
 {
-   int i, j, toRead;
-   int sectors, current, leftInCluster;
+   int i, toRead;
+   int current, leftInCluster;
    char toPrint;
    char fileName[12];
    FILE* newFP;
@@ -438,7 +438,22 @@ int main()
             }
             else
             {
-               change_dir(token[1]);
+               // token = foldera/folderb
+
+               char* cdTok[MAX_COMMAND_SIZE];
+               char* arg_ptr;
+               int count = 0, i;
+
+               while(((arg_ptr = strsep(&token[1], "/")) != NULL) && count < MAX_COMMAND_SIZE)
+               {
+                  cdTok[count++] = strdup(arg_ptr);
+               }
+               
+
+               for(i = 0; i < count; i++)
+               {
+                  change_dir(cdTok[i]);
+               }
             }
          }
          else if ( !strcmp(token[0],"ls") )

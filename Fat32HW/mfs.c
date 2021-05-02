@@ -32,7 +32,7 @@
 #include <ctype.h>
 #include <stdint.h>
 
-#define MAX_NUM_ARGUMENTS 3
+#define MAX_NUM_ARGUMENTS 4
 
 #define WHITESPACE " \t\n"       // We want to split our command line up into tokens
                                  // so we need to define what delimits our tokens.
@@ -43,6 +43,7 @@
 
 FILE *fp = NULL;
 char expanded[12];
+int currDir;
 
 struct __attribute__((__packed__)) DirectoryEntry
 {
@@ -65,6 +66,8 @@ int32_t BPB_FATSz32;
 
 int LBAToOffset(int32_t sector)
 {
+   if ( sector == 0 )
+      sector = 2;
    return ((sector - 2) * BPB_BytsPerSec) + (BPB_BytsPerSec * BPB_RsvdSecCnt)
          + (BPB_NumFATs * BPB_FATSz32 * BPB_BytsPerSec);
 }
@@ -80,8 +83,24 @@ int16_t NextLB(uint32_t sector)
 
 void expand(char* toExpand)
 {
-   char *token = strtok( toExpand, "." );
+   int i;
    memset( expanded, ' ', 12 );
+
+   if(!toExpand)
+      return;
+
+   char *token = strtok( toExpand, "." );
+   
+   if( !token )
+   {
+      for( i = 0; i < 2; i++)
+      {
+         if(toExpand[i] == '.')
+            expanded[i] = '.';
+      }
+      expanded[11] = '\0';
+      return;
+   }
 
    strncpy( expanded, token, strlen( token ) );
 
@@ -94,11 +113,193 @@ void expand(char* toExpand)
 
    expanded[11] = '\0';
 
-   int i;
    for( i = 0; i < 11; i++ )
    {
       expanded[i] = toupper( expanded[i] );
    }
+}
+
+void change_dir(char* token)
+{
+   expand(token);
+
+   int i = 0;
+   for(i = 0; i < 16; i++)
+   {
+      if(!strncmp(dir[i].DIR_Name, expanded, 11) && dir[i].DIR_Attr == 16)
+      {
+         currDir = dir[i].DIR_FirstClusterLow;
+         fseek(fp, LBAToOffset(currDir), SEEK_SET);
+         fread( &dir[0], sizeof(struct DirectoryEntry), 16, fp);
+      }
+   }
+}
+
+void stat(char* token)
+{
+   expand(token);
+
+   int i = 0;
+   for(i = 0; i < 16; i++)
+   {
+      if(!strncmp(dir[i].DIR_Name, expanded, 11))
+      {
+         printf("DIR_Attr:\t\t%d\n", dir[i].DIR_Attr);
+         printf("DIR_FirstClusterLow:\t%d\n", dir[i].DIR_FirstClusterLow);
+         if(dir[i].DIR_Attr == 16)
+         {
+            printf("size:\t\t\t0\n");
+         }
+         else
+         {
+            printf("size:\t%d\n",dir[i].DIR_FileSize);
+         }
+      }
+   }
+}
+
+void list()
+{
+   printf(".\n");
+   //printing contents of directory
+   int i;
+   for(i = 0; i < 16; i++)
+   {
+      //we create a temp variable in order to add null terminator
+      //to the end of the filename
+      char filename[12];
+      strncpy(&filename[0], &dir[i].DIR_Name[0], 11);
+      filename[11] = '\0';
+      if ( dir[i].DIR_Attr == 1 || dir[i].DIR_Attr == 16 || dir[i].DIR_Attr == 32 )
+      {
+         if ( dir[i].DIR_Name[0] != 0x00 && (dir[i].DIR_Name[0] & 0xe5) != 0xe5 )
+            printf("%s\n", filename);
+      }
+   }
+}
+
+void readFile(char* token1, char* token2, char* token3)
+{
+   int i, j, offset = atoi(token2), toRead = atoi(token3);
+   int sectors, current, leftInCluster;
+   char toPrint;
+
+   expand(token1);
+
+   for(i = 0; i < 16; i++)
+   {
+      if(!strncmp(dir[i].DIR_Name, expanded, 11) && dir[i].DIR_Attr == 32)
+      {
+         current = dir[i].DIR_FirstClusterLow;
+         break;
+      }
+   }
+
+   if(i < 16)
+   {
+      sectors = offset/BPB_BytsPerSec;
+      fseek(fp, LBAToOffset(current), SEEK_SET);
+      if(sectors > 0)
+      {
+         for (j = 0; j < sectors; j++)
+         {
+            current = NextLB(current);
+            if(current == -1)
+            {
+               break;
+            }
+            offset -= BPB_BytsPerSec;
+         }
+      }
+      
+      fseek(fp, LBAToOffset(current), SEEK_SET);
+      fseek(fp, offset, SEEK_CUR);
+      if(current >= 0)
+      {
+         leftInCluster = BPB_BytsPerSec - offset;
+         while(toRead)
+         {
+            if(leftInCluster)
+            {
+               toPrint = fgetc(fp);
+               printf("%x ", toPrint);
+               toRead--;
+               leftInCluster--;
+            }
+            else
+            {
+               current = NextLB(current);
+               if(current == -1)
+               {
+                  break;
+               }
+               fseek(fp, LBAToOffset(current), SEEK_SET);
+               leftInCluster = BPB_BytsPerSec;
+            }
+         }
+         printf("\n");
+      }
+      
+      if(current == -1)
+      {
+         printf("Error: out of bounds.\n");
+      }
+   }
+}
+
+void getFile(char* token)
+{
+   int i, j, toRead;
+   int sectors, current, leftInCluster;
+   char toPrint;
+   char fileName[12];
+   FILE* newFP;
+
+   strcpy(fileName, token);
+   expand(token);
+
+   for(i = 0; i < 16; i++)
+   {
+      if(!strncmp(dir[i].DIR_Name, expanded, 11) && dir[i].DIR_Attr == 32)
+      {
+         current = dir[i].DIR_FirstClusterLow;
+         toRead = dir[i].DIR_FileSize;
+         newFP = fopen(fileName, "w");
+         break;
+      }
+   }
+
+   if(i < 16)
+   {
+      fseek(fp, LBAToOffset(current), SEEK_SET);
+      leftInCluster = BPB_BytsPerSec;
+      while(toRead)
+      {
+         if(leftInCluster)
+         {
+            toPrint = fgetc(fp);
+            fputc(toPrint, newFP);
+            toRead--;
+            leftInCluster--;
+         }
+         else
+         {
+            current = NextLB(current);
+            if(current == -1)
+            {
+               break;
+            }
+            fseek(fp, LBAToOffset(current), SEEK_SET);
+            leftInCluster = BPB_BytsPerSec;
+         }
+      }
+      if(current == -1)
+      {
+         printf("Error: out of bounds.\n");
+      }
+   }
+
+   fclose(newFP);
 }
 
 int main()
@@ -126,7 +327,7 @@ int main()
       // parsed by strsep
       char *arg_ptr;                                         
                                                    
-      char *working_str  = strdup( cmd_str );                
+      char *working_str = strdup( cmd_str );                
 
       // we are going to move the working_str pointer so
       // keep track of its original value so we can deallocate
@@ -140,7 +341,7 @@ int main()
          token[token_count] = strndup( arg_ptr, MAX_COMMAND_SIZE );
          if( strlen( token[token_count] ) == 0 )
          {
-               token[token_count] = NULL;
+            token[token_count] = NULL;
          }
          token_count++;
       }
@@ -226,7 +427,7 @@ int main()
             }
             else
             {
-
+               stat(token[1]);
             }
          }
          else if ( !strcmp(token[0],"cd") )
@@ -237,17 +438,7 @@ int main()
             }
             else
             {
-               expand(token[1]);
-
-               int i = 0;
-               for(i = 0; i < 16; i++)
-               {
-                  if(dir[i].DIR_Name == expanded && dir[i].DIR_Attr == 16)
-                  {
-
-                  }
-               }
-
+               change_dir(token[1]);
             }
          }
          else if ( !strcmp(token[0],"ls") )
@@ -258,29 +449,21 @@ int main()
             }
             else if( token[1] == NULL || !strcmp(token[1],".") )
             {
-               //printing contents of directory
-               int i;
-               for(i = 0; i < 16; i++)
-               {
-                  //we create a temp variable in order to add null terminator
-                  //to the end of the filename
-                  char filename[12];
-                  strncpy(&filename[0], &dir[i].DIR_Name[0], 11);
-                  filename[11] = '\0';
-                  if ( dir[i].DIR_Attr == 1 || dir[i].DIR_Attr == 16 || dir[i].DIR_Attr == 32 )
-                  {
-                     if ( dir[i].DIR_Name[0] != 0x00 && dir[i].DIR_Name[0] != 0xe5 )
-                        printf("%s\n", filename);
-                  }
-               }
+               list();
             }
             else if( !strcmp(token[1],"..") )
             {
+               int returnTo = currDir;
 
+               change_dir(token[1]);
+               list();
+
+               fseek(fp, LBAToOffset(returnTo), SEEK_SET);
+               fread( &dir[0], sizeof(struct DirectoryEntry), 16, fp);
             }
             else
             {
-               printf("Error: invalid use of ls.");
+               printf("Error: invalid use of ls.\n");
             }
          }
          else if ( !strcmp(token[0],"get") )
@@ -291,7 +474,7 @@ int main()
             }
             else
             {
-
+               getFile(token[1]);
             }
          }
          else if ( !strcmp(token[0],"read") )
@@ -300,9 +483,9 @@ int main()
             {
                printf("Error: File system image must be opened first.\n");
             }
-            else
+            else if ( token[1] != NULL && token[2] != NULL && token[3] != NULL)
             {
-
+               readFile(token[1], token[2], token[3]);
             }
          }
          else

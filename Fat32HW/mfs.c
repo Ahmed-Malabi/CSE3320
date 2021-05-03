@@ -160,7 +160,6 @@ void stat(char* token)
 
 void list()
 {
-   printf(".\n");
    //printing contents of directory
    int i;
    for(i = 0; i < 16; i++)
@@ -170,7 +169,8 @@ void list()
       char filename[12];
       strncpy(&filename[0], &dir[i].DIR_Name[0], 11);
       filename[11] = '\0';
-      if ( dir[i].DIR_Attr == 1 || dir[i].DIR_Attr == 16 || dir[i].DIR_Attr == 32 )
+      if ( dir[i].DIR_Attr == 1 || dir[i].DIR_Attr == 16 || dir[i].DIR_Attr == 32 || 
+            dir[i].DIR_Attr == 48)
       {
          if ( dir[i].DIR_Name[0] != 0x00 && (dir[i].DIR_Name[0] & 0xe5) != 0xe5 )
             printf("%s\n", filename);
